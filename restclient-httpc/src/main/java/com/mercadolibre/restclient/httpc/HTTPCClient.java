@@ -22,6 +22,7 @@ import com.mercadolibre.restclient.Request;
 import com.mercadolibre.restclient.Response;
 import com.mercadolibre.restclient.exception.RestException;
 import com.mercadolibre.restclient.httpc.util.HTTPCUtil;
+import static com.mercadolibre.restclient.log.LogUtil.log;
 
 
 public class HTTPCClient implements ExecREST {
@@ -44,12 +45,17 @@ public class HTTPCClient implements ExecREST {
 
     private Response executeRequest(HttpRequestBase httpMethod, HttpContext httpContext) throws RestException {
         try (CloseableHttpResponse httpResponse = client.execute(httpMethod, httpContext)) {
-            return new Response(httpResponse.getStatusLine().getStatusCode(), HTTPCUtil.getHeaders(httpResponse), HTTPCUtil.handleResponse(httpResponse));
-        
+        	return new Response(httpResponse.getStatusLine().getStatusCode(), HTTPCUtil.getHeaders(httpResponse), HTTPCUtil.handleResponse(httpResponse));
         } catch (Exception e) {
             httpMethod.abort();
             throw new RestException(e, e.getMessage());
-        }
+        } finally {
+        	try {
+        		httpMethod.releaseConnection();
+        	}catch (Exception e) {
+				log.error("Falha tentando liberar conexão após o uso", e);
+			}
+		}
     }
 
     private Response executeDownload(HttpRequestBase method, HttpContext context, Request request) throws RestException {
